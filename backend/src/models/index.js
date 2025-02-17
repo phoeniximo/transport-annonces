@@ -96,18 +96,16 @@ const avisSchema = new mongoose.Schema({
         required: true,
         minLength: 10,
         maxLength: 500
-    },
-    dateAvis: {
-        type: Date,
-        default: Date.now
     }
 }, { timestamps: true });
 
+// Création des modèles
 const User = mongoose.model('User', userSchema);
 const Annonce = mongoose.model('Annonce', annonceSchema);
 const Message = mongoose.model('Message', messageSchema);
 const Avis = mongoose.model('Avis', avisSchema);
 
+// Export des modèles
 module.exports = {
     User,
     Annonce,

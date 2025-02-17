@@ -4,10 +4,10 @@ const router = express.Router();
 const avisController = require('../controllers/avisController');
 const auth = require('../middleware/auth');
 
-// Toutes les routes nécessitent une authentification
+// Protection de toutes les routes avec authentification
 router.use(auth);
 
-// Créer un nouvel avis
+// Création d'un avis
 router.post('/', avisController.createAvis);
 
 // Obtenir les avis d'un utilisateur spécifique

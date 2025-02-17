@@ -1,23 +1,24 @@
 // backend/src/controllers/avisController.js
-const { Avis, User, Annonce } = require('../models');
+const { Avis, User } = require('../models');
 
-// Créer un nouvel avis
 const createAvis = async (req, res) => {
     try {
         const { destinataire, annonce, note, commentaire } = req.body;
 
         // Vérifier si l'avis existe déjà
-        const avisExistant = await Avis.findOne({
+        const existingAvis = await Avis.findOne({
             auteur: req.user.id,
             destinataire,
             annonce
         });
 
-        if (avisExistant) {
-            return res.status(400).json({ message: 'Vous avez déjà donné votre avis pour cette annonce' });
+        if (existingAvis) {
+            return res.status(400).json({ 
+                message: 'Vous avez déjà donné votre avis pour cette annonce' 
+            });
         }
 
-        // Créer l'avis
+        // Créer le nouvel avis
         const avis = await Avis.create({
             auteur: req.user.id,
             destinataire,
@@ -27,27 +28,33 @@ const createAvis = async (req, res) => {
         });
 
         // Mettre à jour la note moyenne de l'utilisateur
-        const destinataireUser = await User.findById(destinataire);
-        const tousLesAvis = await Avis.find({ destinataire });
-        
-        const noteMoyenne = (destinataireUser.note * destinataireUser.nombreAvis + note) / (destinataireUser.nombreAvis + 1);
-        
-        await User.findByIdAndUpdate(destinataire, {
-            note: noteMoyenne,
-            nombreAvis: destinataireUser.nombreAvis + 1
-        });
+        const userToUpdate = await User.findById(destinataire);
+        if (userToUpdate) {
+            const allAvis = await Avis.find({ destinataire });
+            const totalAvis = allAvis.length;
+            const sommeNotes = allAvis.reduce((sum, avis) => sum + avis.note, 0);
+            const nouvelleMoyenne = sommeNotes / totalAvis;
 
-        await avis.populate('auteur', 'nom email');
-        await avis.populate('destinataire', 'nom email');
-        await avis.populate('annonce', 'titre');
+            await User.findByIdAndUpdate(destinataire, {
+                note: nouvelleMoyenne,
+                nombreAvis: totalAvis
+            });
+        }
+
+        // Populate l'avis avec les informations nécessaires
+        await avis.populate([
+            { path: 'auteur', select: 'nom email' },
+            { path: 'destinataire', select: 'nom email' },
+            { path: 'annonce', select: 'titre' }
+        ]);
 
         res.status(201).json(avis);
     } catch (error) {
+        console.error('Erreur createAvis:', error);
         res.status(400).json({ message: error.message });
     }
 };
 
-// Obtenir tous les avis d'un utilisateur
 const getAvisUtilisateur = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -60,11 +67,11 @@ const getAvisUtilisateur = async (req, res) => {
 
         res.json(avis);
     } catch (error) {
+        console.error('Erreur getAvisUtilisateur:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
-// Obtenir les avis donnés par un utilisateur
 const getAvisDonnes = async (req, res) => {
     try {
         const avis = await Avis.find({ auteur: req.user.id })
@@ -75,11 +82,11 @@ const getAvisDonnes = async (req, res) => {
 
         res.json(avis);
     } catch (error) {
+        console.error('Erreur getAvisDonnes:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
-// Obtenir les avis reçus par un utilisateur
 const getAvisRecus = async (req, res) => {
     try {
         const avis = await Avis.find({ destinataire: req.user.id })
@@ -90,6 +97,7 @@ const getAvisRecus = async (req, res) => {
 
         res.json(avis);
     } catch (error) {
+        console.error('Erreur getAvisRecus:', error);
         res.status(500).json({ message: error.message });
     }
 };
